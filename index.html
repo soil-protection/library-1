@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bibliotheca — Library Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ════════════════════════════════
+   DESIGN TOKENS
+════════════════════════════════ */
+:root {
+  --bg:        #0f0d0b;
+  --surface:   #1a1612;
+  --card:      #211e19;
+  --border:    #302a22;
+  --border2:   #3d3528;
+  --gold:      #c9a84c;
+  --gold2:     #e8c97a;
+  --amber:     #d4822a;
+  --cream:     #f0e6cc;
+  --text:      #d8cdb8;
+  --muted:     #7a6e5e;
+  --red:       #c0392b;
+  --green:     #27ae60;
+  --blue:      #2980b9;
+  --radius:    6px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ════════════════════════════════
+   LAYOUT
+════════════════════════════════ */
+.layout { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.brand-icon {
+  width: 38px; height: 38px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--gold), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.brand-name {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1.15rem; font-weight: 700;
+  color: var(--cream); line-height: 1.1;
+}
+.brand-sub { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; }
+
+.sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+.nav-section-label {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 0.5rem 1.2rem 0.3rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 1.2rem;
+  color: var(--muted); cursor: pointer;
+  transition: all 0.18s; border-left: 3px solid transparent;
+  font-size: 0.9rem; user-select: none;
+  position: relative;
+}
+.nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.06); }
+.nav-item.active {
+  color: var(--gold2); border-left-color: var(--gold);
+  background: rgba(201,168,76,0.1);
+}
+.nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.nav-badge {
+  margin-left: auto; background: var(--red); color: #fff;
+  font-size: 0.65rem; font-weight: 700; padding: 1px 6px;
+  border-radius: 10px; font-family: 'JetBrains Mono', monospace;
+}
+
+.sidebar-footer {
+  padding: 1rem 1.2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--muted);
+}
+.role-pill {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold); padding: 0.3rem 0.75rem; border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── MAIN ── */
+.main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem;
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-left { display: flex; align-items: center; gap: 1rem; }
+.page-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1.1rem; color: var(--cream); font-weight: 700;
+}
+.breadcrumb { font-size: 0.78rem; color: var(--muted); }
+
+.topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+.topbar-search {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.35rem 0.75rem;
+}
+.topbar-search input {
+  background: none; border: none; outline: none;
+  color: var(--text); font-size: 0.85rem; width: 180px;
+}
+.topbar-search input::placeholder { color: var(--muted); }
+.search-icon { color: var(--muted); font-size: 0.9rem; }
+
+.content { flex: 1; padding: 1.5rem; overflow-y: auto; }
+
+/* ════════════════════════════════
+   PAGES
+════════════════════════════════ */
+.page { display: none; animation: pageIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes pageIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ════════════════════════════════
+   COMPONENTS
+════════════════════════════════ */
+
+/* ── STAT CARDS ── */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.25rem 1rem;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+.stat-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--accent-color, var(--gold));
+}
+.stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.stat-num {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 2rem; font-weight: 700; color: var(--cream); line-height: 1;
+}
+.stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.3rem; }
+
+/* ── SECTION HEADER ── */
+.sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.sec-title { font-family: 'Libre Baskerville', serif; font-size: 1.1rem; color: var(--cream); }
+.sec-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 1.2rem; border-radius: var(--radius);
+  border: none; cursor: pointer; font-size: 0.875rem;
+  font-family: 'Source Sans 3', sans-serif; font-weight: 600;
+  transition: all 0.18s; white-space: nowrap;
+}
+.btn-primary { background: var(--gold); color: #111; }
+.btn-primary:hover { background: var(--gold2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,0.3); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-danger { background: rgba(192,57,43,0.15); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); }
+.btn-danger:hover { background: rgba(192,57,43,0.25); }
+.btn-success { background: rgba(39,174,96,0.15); color: #2ecc71; border: 1px solid rgba(39,174,96,0.3); }
+.btn-success:hover { background: rgba(39,174,96,0.25); }
+.btn-sm { padding: 0.3rem 0.75rem; font-size: 0.8rem; }
+.btn-icon { padding: 0.45rem 0.6rem; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; gap: 0.75rem; flex-wrap: wrap;
+}
+.toolbar-left { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+.search-input {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.5rem 0.9rem;
+  color: var(--text); font-size: 0.875rem; outline: none;
+  width: 100%; max-width: 320px; transition: border-color 0.2s;
+}
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--gold); }
+
+.filter-select {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.5rem 0.75rem;
+  color: var(--text); font-size: 0.875rem; outline: none; cursor: pointer;
+}
+.filter-select:focus { border-color: var(--gold); }
+
+/* ── TABLE ── */
+.table-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: var(--surface); border-bottom: 1px solid var(--border); }
+th {
+  padding: 0.75rem 1rem; text-align: left;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+td { padding: 0.75rem 1rem; font-size: 0.875rem; vertical-align: middle; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.2rem 0.6rem; border-radius: 4px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+}
+.badge-green  { background: rgba(39,174,96,0.15); color: #2ecc71; }
+.badge-red    { background: rgba(192,57,43,0.15); color: #e74c3c; }
+.badge-amber  { background: rgba(212,130,42,0.15); color: #e67e22; }
+.badge-blue   { background: rgba(41,128,185,0.15); color: #3498db; }
+.badge-gray   { background: rgba(122,110,94,0.2); color: var(--muted); }
+
+/* ── FORMS ── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 1rem; }
+.form-full { grid-column: 1 / -1; }
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.form-input {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.6rem 0.85rem;
+  color: var(--text); font-size: 0.9rem; outline: none;
+  font-family: 'Source Sans 3', sans-serif;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+.form-input::placeholder { color: var(--muted); }
+select.form-input { cursor: pointer; }
+textarea.form-input { resize: vertical; min-height: 80px; }
+
+.form-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+.form-error { font-size: 0.75rem; color: #e74c3c; margin-top: 0.2rem; display: none; }
+.form-group.has-error .form-input { border-color: #e74c3c; }
+.form-group.has-error .form-error { display: block; }
+
+/* ── CARD ── */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem; padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.card-title { font-family: 'Libre Baskerville', serif; font-size: 0.95rem; color: var(--cream); }
+
+/* ── GRID CARDS ── */
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 1rem; }
+.info-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  transition: all 0.2s; cursor: default;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.info-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: var(--shadow); }
+.info-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gold), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1rem; color: #111;
+  font-family: 'Libre Baskerville', serif;
+}
+.avatar-sm { width: 32px; height: 32px; font-size: 0.8rem; }
+.ic-name { font-weight: 600; color: var(--cream); font-size: 0.9rem; }
+.ic-id { font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.ic-row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--muted); }
+.ic-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+.tab-btn {
+  padding: 0.6rem 1.25rem; cursor: pointer; background: none; border: none;
+  color: var(--muted); font-size: 0.875rem; font-family: 'Source Sans 3', sans-serif;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.18s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--gold2); border-bottom-color: var(--gold); }
+
+/* ── PAGINATION ── */
+.pagination { display: flex; align-items: center; gap: 0.5rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+.page-btn {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); padding: 0.3rem 0.65rem; border-radius: 4px;
+  cursor: pointer; font-size: 0.8rem; transition: all 0.15s;
+}
+.page-btn:hover { border-color: var(--gold); color: var(--gold); }
+.page-btn.active { background: var(--gold); border-color: var(--gold); color: #111; font-weight: 700; }
+.page-info { font-size: 0.78rem; color: var(--muted); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 3.5rem 1rem;
+  color: var(--muted);
+}
+.empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
+.empty-title { font-size: 0.95rem; color: var(--text); margin-bottom: 0.4rem; }
+.empty-sub { font-size: 0.82rem; }
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+/* ── LOADING ── */
+.loading-row td { text-align: center; padding: 2rem; color: var(--muted); }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── API STATUS ── */
+.api-indicator {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+}
+.api-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.api-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+.api-dot.mock { background: var(--amber); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ════════════════════════════════
+   MODAL
+════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 10px; width: 100%; max-width: 560px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  animation: modalIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+@keyframes modalIn { from { opacity:0; transform: scale(0.92) translateY(16px); } to { opacity:1; transform: none; } }
+.modal-header {
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-family: 'Libre Baskerville', serif; font-size: 1rem; color: var(--cream); }
+.modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0.2rem; transition: color 0.15s; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 1.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+/* ════════════════════════════════
+   TOAST
+════════════════════════════════ */
+#toasts { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+.toast {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 0.8rem 1.1rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  box-shadow: var(--shadow); pointer-events: auto; min-width: 260px;
+  animation: toastIn 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes toastIn { from { opacity:0; transform:translateX(100%); } to { opacity:1; transform:none; } }
+.toast-icon { font-size: 1.1rem; }
+.toast-msg { font-size: 0.875rem; flex: 1; }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--blue); }
+.toast.warning { border-left: 3px solid var(--amber); }
+
+/* ════════════════════════════════
+   LOGIN
+════════════════════════════════ */
+#loginScreen {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  background: radial-gradient(ellipse at 30% 50%, rgba(201,168,76,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse at 75% 20%, rgba(212,130,42,0.05) 0%, transparent 50%),
+              var(--bg);
+}
+.login-box {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 2.5rem; width: 100%; max-width: 400px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+  animation: pageIn 0.5s ease;
+}
+.login-logo { text-align: center; margin-bottom: 2rem; }
+.login-brand-icon {
+  width: 60px; height: 60px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; margin: 0 auto 0.75rem;
+}
+.login-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 1.6rem; color: var(--cream); font-weight: 700;
+}
+.login-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; }
+.login-divider { text-align: center; margin: 1.25rem 0; }
+.login-divider span { font-size: 0.75rem; color: var(--muted); padding: 0 0.5rem; background: var(--card); position: relative; z-index: 1; }
+.login-divider::before { content:''; position:absolute; left:2.5rem; right:2.5rem; height:1px; background:var(--border); top:50%; }
+.login-divider { position: relative; }
+.role-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem; }
+.role-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem; text-align: center; cursor: pointer;
+  transition: all 0.2s;
+}
+.role-card:hover { border-color: var(--gold); background: rgba(201,168,76,0.06); }
+.role-card.selected { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+.role-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+.role-name { font-size: 0.85rem; color: var(--text); font-weight: 600; }
+
+/* ════════════════════════════════
+   DASHBOARD SPECIFIC
+════════════════════════════════ */
+.activity-list { display: flex; flex-direction: column; gap: 0; }
+.activity-item {
+  display: flex; align-items: center; gap: 0.9rem;
+  padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.activity-text { font-size: 0.85rem; flex: 1; }
+.activity-time { font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width:800px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ── Book cover colors ── */
+.book-spine { display: inline-block; width: 8px; height: 28px; border-radius: 2px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+
+/* ════════════════════════════════
+   RESPONSIVE
+════════════════════════════════ */
+@media(max-width:768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .main { margin-left: 0; }
+  .mobile-menu-btn { display: flex !important; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+}
+.mobile-menu-btn { display: none; background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
+.sidebar-overlay.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ════════ TOAST ════════ -->
+<div id="toasts"></div>
+
+<!-- ════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-brand-icon">📚</div>
+      <div class="login-title">Bibliotheca</div>
+      <div class="login-sub">Library Management System</div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1rem">
+      <label class="form-label">Username</label>
+      <input id="loginUser" class="form-input" type="text" placeholder="Enter username" autocomplete="username"/>
+    </div>
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">Password</label>
+      <input id="loginPass" class="form-input" type="password" placeholder="Enter password" autocomplete="current-password"/>
+    </div>
+
+    <div class="login-divider"><span>Login as</span></div>
+
+    <div class="role-select-grid">
+      <div class="role-card selected" id="roleAdmin" onclick="selectRole('admin')">
+        <div class="role-icon">🔑</div>
+        <div class="role-name">Librarian</div>
+      </div>
+      <div class="role-card" id="roleStudent" onclick="selectRole('student')">
+        <div class="role-icon">🎓</div>
+        <div class="role-name">Student</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:1.5rem;justify-content:center;padding:0.75rem" onclick="doLogin()">
+      Sign In →
+    </button>
+
+    <div style="text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--muted)">
+      Demo: admin / admin123 &nbsp;·&nbsp; student / student123
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SIDEBAR OVERLAY ════════ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ════════════════════════════════
+     MAIN APP
+════════════════════════════════ -->
+<div class="layout" id="appLayout" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📚</div>
+      <div>
+        <div class="brand-name">Bibliotheca</div>
+        <div class="brand-sub">LMS v2.0</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+
+    <div class="sidebar-footer">
+      <div class="role-pill" id="rolePill">🔑 LIBRARIAN</div>
+      <div id="userName" style="color:var(--text);font-weight:600;font-size:0.85rem;margin-bottom:0.25rem">Admin</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="api-indicator">
+          <div class="api-dot mock" id="apiDot"></div>
+          <span id="apiLabel" style="color:var(--muted)">Mock Mode</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="font-size:0.72rem;padding:0.2rem 0.6rem">Logout</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <div class="page-title" id="topbarTitle">Dashboard</div>
+          <div class="breadcrumb" id="topbarBread">Home</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Quick search…" id="globalSearch" oninput="globalSearchFn(this.value)"/>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- ══ PAGES ══ -->
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="pg-dashboard">
+        <div class="stats-row" id="dashStats"></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Recent Activity</div>
+              <button class="btn btn-ghost btn-sm" onclick="navTo('transactions')">View All</button>
+            </div>
+            <div class="activity-list" id="dashActivity"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">⚠ Overdue Books</div>
+              <span class="badge badge-red" id="overdueCount">0</span>
+            </div>
+            <div id="overdueList"></div>
+          </div>
+        </div>
+        <!-- Quick Issue -->
+        <div class="card" id="quickIssueCard" style="display:none">
+          <div class="card-header"><div class="card-title">⚡ Quick Issue / Return</div></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Student</label>
+              <select class="form-input" id="qi-student"><option value="">Select student…</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Book</label>
+              <select class="form-input" id="qi-book"><option value="">Select book…</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Action</label>
+              <select class="form-input" id="qi-action">
+                <option value="borrow">Issue / Borrow</option>
+                <option value="return">Return</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content:flex-end">
+              <label class="form-label">&nbsp;</label>
+              <button class="btn btn-primary" onclick="quickIssue()">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOOKS -->
+      <div class="page" id="pg-books">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="Search books…" id="bookSearch" oninput="renderBooksPage()"/>
+            <select class="filter-select" id="bookStatusFilter" onchange="renderBooksPage()">
+              <option value="">All Status</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
+            </select>
+            <select class="filter-select" id="bookGenreFilter" onchange="renderBooksPage()">
+              <option value="">All Genres</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="addBookBtn" onclick="openBookModal()">+ Add Book</button>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchBooksView('table',this)">Table View</button>
+          <button class="tab-btn" onclick="switchBooksView('grid',this)">Card View</button>
+        </div>
+        <div id="booksContainer"></div>
+        <div class="pagination" id="booksPagination"></div>
+      </div>
+
+      <!-- STUDENTS -->
+      <div class="page" id="pg-students">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="Search students…" id="stuSearch" oninput="renderStudentsPage()"/>
+            <select class="filter-select" id="stuBranchFilter" onchange="renderStudentsPage()">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="addStuBtn" onclick="openStudentModal()" style="display:none">+ Add Student</button>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchStuView('table',this)">Table View</button>
+          <button class="tab-btn" onclick="switchStuView('grid',this)">Card View</button>
+        </div>
+        <div id="studentsContainer"></div>
+        <div class="pagination" id="stuPagination"></div>
+      </div>
+
+      <!-- TRANSACTIONS -->
+      <div class="page" id="pg-transactions">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="Search transactions…" id="txnSearch" oninput="renderTxnPage()"/>
+            <select class="filter-select" id="txnStatusFilter" onchange="renderTxnPage()">
+              <option value="">All</option>
+              <option value="borrowed">Borrowed</option>
+              <option value="returned">Returned</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="addTxnBtn" onclick="openTxnModal()" style="display:none">+ Issue Book</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Book</th><th>Student</th><th>Issued</th><th>Due</th><th>Returned</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="txnBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="txnPagination"></div>
+      </div>
+
+      <!-- MY BOOKS (Student only) -->
+      <div class="page" id="pg-mybooks">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">My Borrowed Books</div>
+            <div class="sec-sub">Books you currently have checked out</div>
+          </div>
+        </div>
+        <div class="grid-cards" id="myBooksGrid"></div>
+      </div>
+
+      <!-- CATALOG (Student only) -->
+      <div class="page" id="pg-catalog">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="Search catalogue…" id="catSearch" oninput="renderCatalog()"/>
+            <select class="filter-select" id="catGenreFilter" onchange="renderCatalog()">
+              <option value="">All Genres</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-cards" id="catalogGrid"></div>
+      </div>
+
+      <!-- MY HISTORY (Student) -->
+      <div class="page" id="pg-myhistory">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Book</th><th>Issued</th><th>Due</th><th>Returned</th><th>Status</th></tr></thead>
+            <tbody id="myHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ════════ MODAL ════════ -->
+<div id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-overlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);">
+    <div class="modal" id="modalBox">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Modal</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════ -->
+<script>
+/* ══════════════════════════════════════════════
+   API LAYER
+   ─ Replace BASE_URL with your server address.
+   ─ All CRUD goes through these functions.
+   ─ In MOCK mode everything works with local data.
+══════════════════════════════════════════════ */
+const API = {
+  BASE_URL: 'http://localhost:3000/api',   // ← CHANGE THIS to your server
+  USE_MOCK:  true,                          // ← SET false when server is ready
+
+  headers() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`,
+    };
+  },
+
+  async req(method, path, body) {
+    if (this.USE_MOCK) return this.mock(method, path, body);
+    try {
+      const res = await fetch(this.BASE_URL + path, {
+        method, headers: this.headers(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return res.json();
+    } catch(e) {
+      toast('Server error: ' + e.message, 'error');
+      throw e;
+    }
+  },
+
+  get(path)          { return this.req('GET',    path); },
+  post(path, body)   { return this.req('POST',   path, body); },
+  put(path, body)    { return this.req('PUT',    path, body); },
+  del(path)          { return this.req('DELETE', path); },
+
+  /* ── MOCK ENGINE ── */
+  mock(method, path, body) {
+    return new Promise(resolve => setTimeout(() => resolve(this._mockRouter(method, path, body)), 120));
+  },
+
+  _mockRouter(method, path, body) {
+    const seg = path.split('/').filter(Boolean);
+
+    /* AUTH */
+    if (path === '/auth/login') {
+      const u = MOCK.users.find(x=>x.username===body.username&&x.password===body.password);
+      if (!u) return { success:false, message:'Invalid credentials' };
+      return { success:true, token:'mock-token-'+Date.now(), user: u };
+    }
+
+    /* BOOKS */
+    if (seg[0]==='books') {
+      if (!seg[1]) {
+        if (method==='GET')  return { data: MOCK.books, total: MOCK.books.length };
+        if (method==='POST') {
+          const b = { ...body, id: ++MOCK.seq.book, available: body.copies };
+          MOCK.books.push(b); return { data: b };
+        }
+      } else {
+        const id=parseInt(seg[1]), idx=MOCK.books.findIndex(b=>b.id===id);
+        if (method==='PUT')    { MOCK.books[idx]={...MOCK.books[idx],...body}; return { data:MOCK.books[idx] }; }
+        if (method==='DELETE') { MOCK.books.splice(idx,1); return { success:true }; }
+        if (method==='GET')    return { data: MOCK.books[idx] };
+      }
+    }
+
+    /* STUDENTS */
+    if (seg[0]==='students') {
+      if (!seg[1]) {
+        if (method==='GET')  return { data: MOCK.students, total: MOCK.students.length };
+        if (method==='POST') {
+          const s = { ...body, id: 'STU'+String(++MOCK.seq.student).padStart(3,'0') };
+          MOCK.students.push(s); return { data: s };
+        }
+      } else {
+        const id=seg[1], idx=MOCK.students.findIndex(s=>s.id===id);
+        if (method==='PUT')    { MOCK.students[idx]={...MOCK.students[idx],...body}; return { data:MOCK.students[idx] }; }
+        if (method==='DELETE') { MOCK.students.splice(idx,1); return { success:true }; }
+        if (method==='GET')    return { data: MOCK.students[idx] };
+      }
+    }
+
+    /* TRANSACTIONS */
+    if (seg[0]==='transactions') {
+      if (!seg[1]) {
+        if (method==='GET') return { data: MOCK.transactions, total: MOCK.transactions.length };
+        if (method==='POST') {
+          const book = MOCK.books.find(b=>b.id===body.bookId);
+          if (!book || book.available<1) return { success:false, message:'Book not available' };
+          book.available--;
+          const due = new Date(); due.setDate(due.getDate()+14);
+          const t = { ...body, id:'TXN'+String(++MOCK.seq.txn).padStart(4,'0'), issuedDate: today(), dueDate: due.toISOString().split('T')[0], returnedDate: null };
+          MOCK.transactions.unshift(t); return { data: t };
+        }
+      } else {
+        const id=seg[1], idx=MOCK.transactions.findIndex(t=>t.id===id);
+        if (method==='PUT' && body.action==='return') {
+          const t=MOCK.transactions[idx]; t.returnedDate=today();
+          const book=MOCK.books.find(b=>b.id===t.bookId);
+          if(book) book.available=Math.min(book.available+1,book.copies);
+          return { data:t };
+        }
+        if (method==='DELETE') { MOCK.transactions.splice(idx,1); return { success:true }; }
+      }
+    }
+
+    return { success:true };
+  }
+};
+
+/* ══════════════════════════════════════════════
+   MOCK DATA
+══════════════════════════════════════════════ */
+const MOCK = {
+  seq: { book:9, student:4, txn:4 },
+  users: [
+    { username:'admin', password:'admin123', role:'admin', name:'Librarian Admin' },
+    { username:'student', password:'student123', role:'student', name:'Demo Student', studentId:'STU001' },
+  ],
+  books: [
+    { id:1, title:'To Kill a Mockingbird', author:'Harper Lee', genre:'Fiction', isbn:'978-0446310789', copies:3, available:2, shelf:'A-01', publisher:'Grand Central', year:1960 },
+    { id:2, title:'The Great Gatsby', author:'F. Scott Fitzgerald', genre:'Classic', isbn:'978-0743273565', copies:2, available:1, shelf:'A-02', publisher:'Scribner', year:1925 },
+    { id:3, title:'1984', author:'George Orwell', genre:'Dystopian', isbn:'978-0451524935', copies:4, available:3, shelf:'B-01', publisher:'Signet', year:1949 },
+    { id:4, title:'Pride and Prejudice', author:'Jane Austen', genre:'Romance', isbn:'978-0141439518', copies:3, available:3, shelf:'A-03', publisher:'Penguin', year:1813 },
+    { id:5, title:'The Catcher in the Rye', author:'J.D. Salinger', genre:'Fiction', isbn:'978-0316769174', copies:2, available:0, shelf:'B-02', publisher:'Little Brown', year:1951 },
+    { id:6, title:'Brave New World', author:'Aldous Huxley', genre:'Sci-Fi', isbn:'978-0060850524', copies:2, available:2, shelf:'C-01', publisher:'Harper', year:1932 },
+    { id:7, title:'The Alchemist', author:'Paulo Coelho', genre:'Adventure', isbn:'978-0062315007', copies:5, available:4, shelf:'D-01', publisher:'HarperOne', year:1988 },
+    { id:8, title:'Sapiens', author:'Yuval Noah Harari', genre:'Non-Fiction', isbn:'978-0062316097', copies:3, available:2, shelf:'E-01', publisher:'Harper', year:2011 },
+    { id:9, title:'Atomic Habits', author:'James Clear', genre:'Self-Help', isbn:'978-0735211292', copies:4, available:3, shelf:'E-02', publisher:'Avery', year:2018 },
+  ],
+  students: [
+    { id:'STU001', name:'Aarav Sharma', branch:'Computer Science', year:'3rd Year', rollNo:'CS2022001', email:'aarav@college.edu', phone:'9876543210' },
+    { id:'STU002', name:'Priya Patel', branch:'Electronics', year:'2nd Year', rollNo:'EC2023002', email:'priya@college.edu', phone:'9123456789' },
+    { id:'STU003', name:'Rohit Verma', branch:'Mechanical', year:'4th Year', rollNo:'ME2021003', email:'rohit@college.edu', phone:'9988776655' },
+    { id:'STU004', name:'Sneha Kulkarni', branch:'Civil', year:'1st Year', rollNo:'CE2024004', email:'sneha@college.edu', phone:'9012345678' },
+  ],
+  transactions: [
+    { id:'TXN0001', bookId:5, studentId:'STU001', issuedDate:'2026-04-01', dueDate:'2026-04-15', returnedDate:null },
+    { id:'TXN0002', bookId:2, studentId:'STU002', issuedDate:'2026-04-10', dueDate:'2026-04-24', returnedDate:null },
+    { id:'TXN0003', bookId:1, studentId:'STU003', issuedDate:'2026-03-20', dueDate:'2026-04-03', returnedDate:'2026-04-02' },
+    { id:'TXN0004', bookId:7, studentId:'STU004', issuedDate:'2026-04-12', dueDate:'2026-04-26', returnedDate:null },
+  ]
+};
+
+/* ══════════════════════════════════════════════
+   APP STATE
+══════════════════════════════════════════════ */
+let STATE = {
+  role: null, user: null,
+  books: [], students: [], transactions: [],
+  booksView: 'table', stuView: 'table',
+  booksPage: 1, stuPage: 1, txnPage: 1,
+  pageSize: 10,
+};
+
+const BOOK_COLORS = ['#c0392b','#27ae60','#2980b9','#8e44ad','#d4822a','#16a085','#2c3e50','#c9a84c','#e74c3c'];
+const GENRES = ['Fiction','Classic','Sci-Fi','Non-Fiction','Romance','Mystery','Dystopian','Adventure','Self-Help','Biography','History','Science','Other'];
+const YEARS  = ['1st Year','2nd Year','3rd Year','4th Year'];
+const BRANCHES = ['Computer Science','Electronics','Mechanical','Civil','Chemical','IT','Electrical','MBA','MCA'];
+
+const today  = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const isOverdue = t => !t.returnedDate && new Date(t.dueDate) < new Date(today());
+const getBook = id => STATE.books.find(b=>b.id===id);
+const getStu  = id => STATE.students.find(s=>s.id===id);
+
+/* ══════════════════════════════════════════════
+   NAV CONFIG
+══════════════════════════════════════════════ */
+const ADMIN_NAV = [
+  { label:'OVERVIEW', items:[
+    { id:'dashboard',    icon:'📊', label:'Dashboard' },
+  ]},
+  { label:'CATALOGUE', items:[
+    { id:'books',        icon:'📚', label:'Books' },
+    { id:'transactions', icon:'🔄', label:'Transactions', badge:'overdue' },
+  ]},
+  { label:'MEMBERS', items:[
+    { id:'students',     icon:'🎓', label:'Students' },
+  ]},
+];
+
+const STUDENT_NAV = [
+  { label:'LIBRARY', items:[
+    { id:'dashboard',  icon:'📊', label:'Home' },
+    { id:'catalog',    icon:'📚', label:'Book Catalogue' },
+  ]},
+  { label:'MY ACCOUNT', items:[
+    { id:'mybooks',    icon:'📖', label:'My Books' },
+    { id:'myhistory',  icon:'🕐', label:'My History' },
+  ]},
+];
+
+/* ══════════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════════ */
+let selectedRole = 'admin';
+function selectRole(r) {
+  selectedRole = r;
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('role'+r.charAt(0).toUpperCase()+r.slice(1)).classList.add('selected');
+}
+
+async function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (!u||!p) { toast('Enter username and password','warning'); return; }
+  try {
+    const res = await API.post('/auth/login', { username:u, password:p, role:selectedRole });
+    if (!res.success) { toast(res.message||'Login failed','error'); return; }
+    if (res.user.role !== selectedRole) { toast('Wrong role for this account','error'); return; }
+    STATE.role = res.user.role;
+    STATE.user = res.user;
+    sessionStorage.setItem('token', res.token);
+    sessionStorage.setItem('user', JSON.stringify(res.user));
+    document.getElementById('loginScreen').style.display = 'none';
+    initApp();
+  } catch(e) { toast('Login error','error'); }
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  sessionStorage.clear();
+  STATE = { role:null, user:null, books:[], students:[], transactions:[], booksView:'table', stuView:'table', booksPage:1, stuPage:1, txnPage:1, pageSize:10 };
+  document.getElementById('appLayout').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+/* ══════════════════════════════════════════════
+   APP INIT
+══════════════════════════════════════════════ */
+async function initApp() {
+  document.getElementById('appLayout').style.display = 'flex';
+  document.getElementById('rolePill').textContent = STATE.role==='admin' ? '🔑 LIBRARIAN' : '🎓 STUDENT';
+  document.getElementById('userName').textContent = STATE.user.name;
+
+  // API indicator
+  document.getElementById('apiDot').className = 'api-dot ' + (API.USE_MOCK ? 'mock' : 'live');
+  document.getElementById('apiLabel').textContent = API.USE_MOCK ? 'Mock Mode' : 'Live';
+
+  buildSidebar();
+  await loadData();
+  buildDropdowns();
+  navTo('dashboard');
+}
+
+function buildSidebar() {
+  const nav = STATE.role==='admin' ? ADMIN_NAV : STUDENT_NAV;
+  let html = '';
+  nav.forEach(section => {
+    html += `<div class="nav-section-label">${section.label}</div>`;
+    section.items.forEach(item => {
+      html += `<div class="nav-item" id="nav-${item.id}" onclick="navTo('${item.id}')">
+        <span class="nav-icon">${item.icon}</span>
+        <span>${item.label}</span>
+        ${item.badge ? `<span class="nav-badge" id="nb-${item.badge}" style="display:none">0</span>` : ''}
+      </div>`;
+    });
+  });
+  document.getElementById('sidebarNav').innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════
+   DATA LOADING
+══════════════════════════════════════════════ */
+async function loadData() {
+  const [br, sr, tr] = await Promise.all([
+    API.get('/books'),
+    API.get('/students'),
+    API.get('/transactions'),
+  ]);
+  STATE.books        = br.data || [];
+  STATE.students     = sr.data || [];
+  STATE.transactions = tr.data || [];
+}
+
+/* ══════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════ */
+const PAGE_TITLES = {
+  dashboard:'Dashboard', books:'Books', students:'Students',
+  transactions:'Transactions', mybooks:'My Books', catalog:'Book Catalogue', myhistory:'My History'
+};
+
+function navTo(pageId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg = document.getElementById('pg-'+pageId);
+  if (pg) pg.classList.add('active');
+  const ni = document.getElementById('nav-'+pageId);
+  if (ni) ni.classList.add('active');
+  document.getElementById('topbarTitle').textContent = PAGE_TITLES[pageId]||pageId;
+  document.getElementById('topbarBread').textContent = 'Home › ' + (PAGE_TITLES[pageId]||pageId);
+  closeSidebar();
+
+  // Render based on page
+  const renders = {
+    dashboard:    renderDashboard,
+    books:        renderBooksPage,
+    students:     renderStudentsPage,
+    transactions: renderTxnPage,
+    mybooks:      renderMyBooks,
+    catalog:      renderCatalog,
+    myhistory:    renderMyHistory,
+  };
+  if (renders[pageId]) renders[pageId]();
+}
+
+/* ══════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════ */
+function renderDashboard() {
+  const totalBooks  = STATE.books.reduce((s,b)=>s+b.copies,0);
+  const avail       = STATE.books.reduce((s,b)=>s+b.available,0);
+  const borrowed    = STATE.transactions.filter(t=>!t.returnedDate).length;
+  const overdue     = STATE.transactions.filter(t=>isOverdue(t));
+  const overdueCnt  = overdue.length;
+
+  // Update overdue badge
+  const nb = document.getElementById('nb-overdue');
+  if (nb) { nb.textContent = overdueCnt; nb.style.display = overdueCnt ? 'inline' : 'none'; }
+
+  if (STATE.role==='admin') {
+    document.getElementById('dashStats').innerHTML = [
+      { icon:'📚', num:totalBooks,           label:'Total Books',    color:'var(--gold)' },
+      { icon:'✅', num:avail,                label:'Available',      color:'var(--green)' },
+      { icon:'📤', num:borrowed,             label:'Borrowed',       color:'var(--amber)' },
+      { icon:'⚠️', num:overdueCnt,           label:'Overdue',        color:'var(--red)' },
+      { icon:'🎓', num:STATE.students.length,label:'Students',       color:'var(--blue)' },
+    ].map((s,i)=>`
+      <div class="stat-card" style="--accent-color:${s.color};animation-delay:${i*0.06}s">
+        <div class="stat-icon">${s.icon}</div>
+        <div class="stat-num">${s.num}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>`).join('');
+
+    document.getElementById('quickIssueCard').style.display = 'block';
+    document.getElementById('addTxnBtn').style.display = 'inline-flex';
+    document.getElementById('addBookBtn').style.display = 'inline-flex';
+    document.getElementById('addStuBtn').style.display  = 'inline-flex';
+    populateQuickSelects();
+  } else {
+    const myTxns = STATE.transactions.filter(t=>t.studentId===STATE.user.studentId);
+    const myBorrowed = myTxns.filter(t=>!t.returnedDate).length;
+    const myOverdue  = myTxns.filter(t=>isOverdue(t)).length;
+    document.getElementById('dashStats').innerHTML = [
+      { icon:'📚', num:STATE.books.reduce((s,b)=>s+b.copies,0), label:'Total Books',   color:'var(--gold)' },
+      { icon:'✅', num:avail,                                     label:'Available Now', color:'var(--green)' },
+      { icon:'📖', num:myBorrowed,                                label:'My Borrowed',   color:'var(--amber)' },
+      { icon:'⚠️', num:myOverdue,                                 label:'My Overdue',   color:'var(--red)' },
+    ].map((s,i)=>`
+      <div class="stat-card" style="--accent-color:${s.color}">
+        <div class="stat-icon">${s.icon}</div>
+        <div class="stat-num">${s.num}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>`).join('');
+    document.getElementById('quickIssueCard').style.display = 'none';
+  }
+
+  // Recent activity
+  const recent = [...STATE.transactions].slice(0,8);
+  document.getElementById('dashActivity').innerHTML = recent.length ? recent.map(t=>{
+    const b=getBook(t.bookId), s=getStu(t.studentId);
+    const over = isOverdue(t);
+    return `<div class="activity-item">
+      <div class="activity-dot" style="background:${t.returnedDate?'var(--green)':over?'var(--red)':'var(--amber)'}"></div>
+      <div class="activity-text">
+        <strong style="color:var(--cream)">${b?b.title:'—'}</strong>
+        ${STATE.role==='admin'?`<span style="color:var(--muted)"> · ${s?s.name:'—'}</span>`:''}
+        <span class="badge ${t.returnedDate?'badge-green':over?'badge-red':'badge-amber'}" style="margin-left:0.4rem;font-size:0.62rem">
+          ${t.returnedDate?'Returned':over?'Overdue':'Borrowed'}
+        </span>
+      </div>
+      <div class="activity-time">${fmtDate(t.issuedDate)}</div>
+    </div>`;
+  }).join('') : '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-sub">No activity yet</div></div>';
+
+  // Overdue
+  document.getElementById('overdueCount').textContent = overdueCnt;
+  document.getElementById('overdueList').innerHTML = overdueCnt ? overdue.slice(0,5).map(t=>{
+    const b=getBook(t.bookId), s=getStu(t.studentId);
+    return `<div class="activity-item">
+      <div class="activity-dot" style="background:var(--red)"></div>
+      <div class="activity-text">
+        <strong style="color:var(--cream)">${b?b.title:'—'}</strong>
+        ${STATE.role==='admin'?`<span style="color:var(--muted)"> · ${s?s.name:'—'}</span>`:''}
+      </div>
+      <div class="activity-time" style="color:var(--red)">${fmtDate(t.dueDate)}</div>
+    </div>`;
+  }).join('') : '<div style="padding:1rem;color:var(--muted);font-size:0.85rem;text-align:center">No overdue books 🎉</div>';
+}
+
+/* ══════════════════════════════════════════════
+   BOOKS
+══════════════════════════════════════════════ */
+function buildDropdowns() {
+  const genres = [...new Set(STATE.books.map(b=>b.genre))].filter(Boolean);
+  const branches = [...new Set(STATE.students.map(s=>s.branch))].filter(Boolean);
+
+  ['bookGenreFilter','catGenreFilter'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = '<option value="">All Genres</option>' + genres.map(g=>`<option>${g}</option>`).join('');
+  });
+  const sbf = document.getElementById('stuBranchFilter');
+  if (sbf) sbf.innerHTML = '<option value="">All Branches</option>' + branches.map(b=>`<option>${b}</option>`).join('');
+}
+
+function filteredBooks() {
+  const q   = (document.getElementById('bookSearch')?.value||'').toLowerCase();
+  const st  = document.getElementById('bookStatusFilter')?.value||'';
+  const gen = document.getElementById('bookGenreFilter')?.value||'';
+  return STATE.books.filter(b=>{
+    const matchQ = !q || b.title.toLowerCase().includes(q)||b.author.toLowerCase().includes(q)||b.isbn?.includes(q);
+    const matchS = !st || (st==='available'?b.available>0:b.available===0);
+    const matchG = !gen || b.genre===gen;
+    return matchQ&&matchS&&matchG;
+  });
+}
+
+function paginate(arr, page, size) {
+  return { items: arr.slice((page-1)*size, page*size), total: arr.length, pages: Math.ceil(arr.length/size) };
+}
+
+function renderPagination(containerId, page, pages, onPage) {
+  if (pages<=1) { document.getElementById(containerId).innerHTML=''; return; }
+  let html = `<div class="page-info">Page ${page} of ${pages}</div>`;
+  if (page>1) html += `<button class="page-btn" onclick="${onPage}(${page-1})">‹ Prev</button>`;
+  for (let p=Math.max(1,page-2); p<=Math.min(pages,page+2); p++)
+    html += `<button class="page-btn ${p===page?'active':''}" onclick="${onPage}(${p})">${p}</button>`;
+  if (page<pages) html += `<button class="page-btn" onclick="${onPage}(${page+1})">Next ›</button>`;
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function switchBooksView(v, btn) {
+  STATE.booksView = v;
+  document.querySelectorAll('#pg-books .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBooksPage();
+}
+function booksGotoPage(p) { STATE.booksPage=p; renderBooksPage(); }
+
+function renderBooksPage() {
+  const all = filteredBooks();
+  const { items, total, pages } = paginate(all, STATE.booksPage, STATE.pageSize);
+  const container = document.getElementById('booksContainer');
+  if (!all.length) { container.innerHTML = emptyState('No books found','Try adjusting your filters'); renderPagination('booksPagination',1,1,'booksGotoPage'); return; }
+
+  if (STATE.booksView === 'table') {
+    container.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Title</th><th>Author</th><th>Genre</th><th>ISBN</th><th>Shelf</th><th>Copies</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${items.map((b,i)=>`<tr>
+        <td><span style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${(STATE.booksPage-1)*STATE.pageSize+i+1}</span></td>
+        <td><div style="display:flex;align-items:center;gap:0.5rem">
+          <div class="book-spine" style="background:${BOOK_COLORS[b.id%BOOK_COLORS.length]}"></div>
+          <strong style="color:var(--cream)">${b.title}</strong>
+        </div></td>
+        <td>${b.author}</td>
+        <td><span class="badge badge-blue">${b.genre}</span></td>
+        <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted)">${b.isbn||'—'}</span></td>
+        <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem">${b.shelf||'—'}</span></td>
+        <td><span style="font-family:'JetBrains Mono',monospace">${b.available}/${b.copies}</span></td>
+        <td>${b.available>0?`<span class="badge badge-green">Available</span>`:`<span class="badge badge-red">All Out</span>`}</td>
+        <td>${STATE.role==='admin'?`
+          <div style="display:flex;gap:0.4rem">
+            <button class="btn btn-ghost btn-sm" onclick="openBookModal(${b.id})">✏</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteBook(${b.id})">🗑</button>
+          </div>`:''}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } else {
+    container.innerHTML = `<div class="grid-cards">${items.map(b=>`
+      <div class="info-card">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <div style="width:8px;height:60px;border-radius:3px;background:${BOOK_COLORS[b.id%BOOK_COLORS.length]};flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-weight:600;color:var(--cream);margin-bottom:0.2rem">${b.title}</div>
+            <div style="font-size:0.82rem;color:var(--muted);font-style:italic">${b.author}</div>
+            <div style="margin-top:0.5rem;display:flex;gap:0.4rem;flex-wrap:wrap">
+              <span class="badge badge-blue">${b.genre}</span>
+              ${b.available>0?`<span class="badge badge-green">${b.available} avail.</span>`:`<span class="badge badge-red">All Out</span>`}
+            </div>
+            <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace">
+              ${b.isbn||''} ${b.shelf?'· '+b.shelf:''}
+            </div>
+          </div>
+        </div>
+        ${STATE.role==='admin'?`<div class="ic-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openBookModal(${b.id})" style="flex:1">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBook(${b.id})" style="flex:1">🗑 Delete</button>
+        </div>`:''}
+      </div>`).join('')}</div>`;
+  }
+  renderPagination('booksPagination', STATE.booksPage, pages, 'booksGotoPage');
+}
+
+/* ── Book Modal ── */
+function openBookModal(id) {
+  const b = id ? getBook(id) : null;
+  showModal(
+    b ? '✏️ Edit Book' : '📗 Add New Book',
+    `<div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Book Title *</label>
+        <input class="form-input" id="bm-title" placeholder="Enter book title" value="${b?.title||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Author *</label>
+        <input class="form-input" id="bm-author" placeholder="Author name" value="${b?.author||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Genre</label>
+        <select class="form-input" id="bm-genre">
+          ${GENRES.map(g=>`<option ${g===(b?.genre||'')?'selected':''}>${g}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ISBN</label>
+        <input class="form-input" id="bm-isbn" placeholder="978-…" value="${b?.isbn||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Publisher</label>
+        <input class="form-input" id="bm-publisher" placeholder="Publisher name" value="${b?.publisher||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Year</label>
+        <input class="form-input" id="bm-year" type="number" placeholder="e.g. 2020" value="${b?.year||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total Copies *</label>
+        <input class="form-input" id="bm-copies" type="number" min="1" value="${b?.copies||1}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shelf Location</label>
+        <input class="form-input" id="bm-shelf" placeholder="e.g. A-01" value="${b?.shelf||''}"/>
+      </div>
+    </div>`,
+    [
+      { label:'Cancel', cls:'btn-ghost', action:closeModal },
+      { label: b ? 'Save Changes' : '+ Add Book', cls:'btn-primary', action:()=>saveBook(b?.id) }
+    ]
+  );
+}
+
+async function saveBook(id) {
+  const title  = val('bm-title');
+  const author = val('bm-author');
+  const copies = parseInt(val('bm-copies'))||1;
+  if (!title||!author) { toast('Title and author are required','warning'); return; }
+  const data = {
+    title, author, copies,
+    genre:     val('bm-genre'),
+    isbn:      val('bm-isbn'),
+    publisher: val('bm-publisher'),
+    year:      parseInt(val('bm-year'))||null,
+    shelf:     val('bm-shelf'),
+  };
+  try {
+    if (id) {
+      const res = await API.put(`/books/${id}`, data);
+      const idx = STATE.books.findIndex(b=>b.id===id);
+      if (idx>=0) STATE.books[idx] = { ...STATE.books[idx], ...res.data };
+      toast('Book updated successfully','success');
+    } else {
+      const res = await API.post('/books', data);
+      STATE.books.push(res.data);
+      toast(`"${title}" added to catalogue!`,'success');
+    }
+    closeModal(); buildDropdowns(); renderBooksPage(); renderDashboard();
+  } catch(e) { toast('Error saving book','error'); }
+}
+
+async function deleteBook(id) {
+  const b = getBook(id);
+  if (!confirm(`Delete "${b?.title}"? This cannot be undone.`)) return;
+  try {
+    await API.del(`/books/${id}`);
+    STATE.books = STATE.books.filter(bk=>bk.id!==id);
+    toast(`"${b?.title}" removed`,'success');
+    renderBooksPage(); renderDashboard();
+  } catch(e) { toast('Error deleting book','error'); }
+}
+
+/* ══════════════════════════════════════════════
+   STUDENTS
+══════════════════════════════════════════════ */
+function filteredStudents() {
+  const q  = (document.getElementById('stuSearch')?.value||'').toLowerCase();
+  const br = document.getElementById('stuBranchFilter')?.value||'';
+  return STATE.students.filter(s=>{
+    const mQ = !q || s.name.toLowerCase().includes(q)||s.id.toLowerCase().includes(q)||(s.rollNo||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
+    const mB = !br || s.branch===br;
+    return mQ&&mB;
+  });
+}
+
+function switchStuView(v, btn) {
+  STATE.stuView = v;
+  document.querySelectorAll('#pg-students .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStudentsPage();
+}
+function stuGotoPage(p) { STATE.stuPage=p; renderStudentsPage(); }
+
+function renderStudentsPage() {
+  const all = filteredStudents();
+  const { items, pages } = paginate(all, STATE.stuPage, STATE.pageSize);
+  const container = document.getElementById('studentsContainer');
+  if (!all.length) { container.innerHTML = emptyState('No students found','Try different filters'); return; }
+
+  if (STATE.stuView === 'table') {
+    container.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Roll No.</th><th>Branch</th><th>Year</th><th>Email</th><th>Phone</th><th>Active</th>${STATE.role==='admin'?'<th>Actions</th>':''}</tr></thead>
+      <tbody>${items.map(s=>{
+        const active = STATE.transactions.filter(t=>t.studentId===s.id&&!t.returnedDate).length;
+        return `<tr>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--gold)">${s.id}</span></td>
+          <td><div style="display:flex;align-items:center;gap:0.6rem">
+            <div class="avatar avatar-sm">${s.name[0]}</div>
+            <strong style="color:var(--cream)">${s.name}</strong>
+          </div></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem">${s.rollNo||'—'}</span></td>
+          <td>${s.branch||'—'}</td>
+          <td>${s.year||'—'}</td>
+          <td style="color:var(--muted)">${s.email||'—'}</td>
+          <td style="color:var(--muted)">${s.phone||'—'}</td>
+          <td>${active>0?`<span class="badge badge-amber">${active} book${active>1?'s':''}</span>`:`<span class="badge badge-gray">None</span>`}</td>
+          ${STATE.role==='admin'?`<td><div style="display:flex;gap:0.4rem">
+            <button class="btn btn-ghost btn-sm" onclick="openStudentModal('${s.id}')">✏</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">🗑</button>
+          </div></td>`:''}
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  } else {
+    container.innerHTML = `<div class="grid-cards">${items.map(s=>{
+      const active = STATE.transactions.filter(t=>t.studentId===s.id&&!t.returnedDate).length;
+      return `<div class="info-card">
+        <div class="info-card-header">
+          <div class="avatar">${s.name[0]}</div>
+          <div>
+            <div class="ic-name">${s.name}</div>
+            <div class="ic-id">${s.id}</div>
+          </div>
+        </div>
+        <div class="ic-row">📚 ${s.branch||'—'} · ${s.year||'—'}</div>
+        <div class="ic-row">🎓 ${s.rollNo||'—'}</div>
+        <div class="ic-row">📧 ${s.email||'—'}</div>
+        <div class="ic-row">📞 ${s.phone||'—'}</div>
+        <div class="ic-row" style="margin-top:0.3rem">
+          ${active>0?`<span class="badge badge-amber">${active} borrowed</span>`:`<span class="badge badge-gray">No active borrows</span>`}
+        </div>
+        ${STATE.role==='admin'?`<div class="ic-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openStudentModal('${s.id}')" style="flex:1">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')" style="flex:1">🗑 Remove</button>
+        </div>`:''}
+      </div>`;
+    }).join('')}</div>`;
+  }
+  renderPagination('stuPagination', STATE.stuPage, pages, 'stuGotoPage');
+}
+
+/* ── Student Modal ── */
+function openStudentModal(id) {
+  const s = id ? getStu(id) : null;
+  showModal(
+    s ? '✏️ Edit Student' : '🎓 Add New Student',
+    `<div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Full Name *</label>
+        <input class="form-input" id="sm-name" placeholder="Student full name" value="${s?.name||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Student ID${s?'':' (auto-assigned)'}</label>
+        <input class="form-input" id="sm-id" placeholder="e.g. STU005" value="${s?.id||''}" ${s?'':'readonly style="opacity:0.5"'}/>
+        ${!s?'<div class="form-hint">ID will be auto-assigned by server</div>':''}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Roll Number</label>
+        <input class="form-input" id="sm-roll" placeholder="e.g. CS2024001" value="${s?.rollNo||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Branch</label>
+        <select class="form-input" id="sm-branch">
+          ${BRANCHES.map(b=>`<option ${b===(s?.branch||'')?'selected':''}>${b}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Year</label>
+        <select class="form-input" id="sm-year">
+          ${YEARS.map(y=>`<option ${y===(s?.year||'')?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="sm-email" type="email" placeholder="student@college.edu" value="${s?.email||''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-input" id="sm-phone" placeholder="10-digit number" value="${s?.phone||''}"/>
+      </div>
+    </div>`,
+    [
+      { label:'Cancel', cls:'btn-ghost', action:closeModal },
+      { label: s ? 'Save Changes' : '+ Add Student', cls:'btn-primary', action:()=>saveStudent(s?.id) }
+    ]
+  );
+}
+
+async function saveStudent(id) {
+  const name = val('sm-name');
+  if (!name) { toast('Name is required','warning'); return; }
+  const data = {
+    name,
+    rollNo:  val('sm-roll'),
+    branch:  val('sm-branch'),
+    year:    val('sm-year'),
+    email:   val('sm-email'),
+    phone:   val('sm-phone'),
+  };
+  try {
+    if (id) {
+      const res = await API.put(`/students/${id}`, data);
+      const idx = STATE.students.findIndex(s=>s.id===id);
+      if (idx>=0) STATE.students[idx] = { ...STATE.students[idx], ...res.data };
+      toast('Student updated!','success');
+    } else {
+      const res = await API.post('/students', data);
+      STATE.students.push(res.data);
+      toast(`${name} registered!`,'success');
+    }
+    closeModal(); populateQuickSelects(); buildDropdowns(); renderStudentsPage(); renderDashboard();
+  } catch(e) { toast('Error saving student','error'); }
+}
+
+async function deleteStudent(id) {
+  const s = getStu(id);
+  const active = STATE.transactions.filter(t=>t.studentId===id&&!t.returnedDate).length;
+  if (active>0) { toast(`Cannot delete — ${active} active borrow(s)!`,'warning'); return; }
+  if (!confirm(`Remove "${s?.name}"?`)) return;
+  try {
+    await API.del(`/students/${id}`);
+    STATE.students = STATE.students.filter(st=>st.id!==id);
+    toast(`${s?.name} removed`,'success');
+    renderStudentsPage(); renderDashboard();
+  } catch(e) { toast('Error deleting student','error'); }
+}
+
+/* ══════════════════════════════════════════════
+   TRANSACTIONS
+══════════════════════════════════════════════ */
+function filteredTxns() {
+  const q   = (document.getElementById('txnSearch')?.value||'').toLowerCase();
+  const st  = document.getElementById('txnStatusFilter')?.value||'';
+  return STATE.transactions.filter(t=>{
+    const b=getBook(t.bookId), s=getStu(t.studentId);
+    const mQ = !q || (b?.title||'').toLowerCase().includes(q)||(s?.name||'').toLowerCase().includes(q)||t.id.toLowerCase().includes(q);
+    const mS = !st
+      || (st==='returned' && t.returnedDate)
+      || (st==='borrowed' && !t.returnedDate && !isOverdue(t))
+      || (st==='overdue'  && isOverdue(t));
+    return mQ&&mS;
+  });
+}
+
+function txnGotoPage(p) { STATE.txnPage=p; renderTxnPage(); }
+
+function renderTxnPage() {
+  const all = filteredTxns();
+  const { items, pages } = paginate(all, STATE.txnPage, STATE.pageSize);
+  const tbody = document.getElementById('txnBody');
+  if (!all.length) { tbody.innerHTML = `<tr><td colspan="8">${emptyState('No transactions found','Try adjusting filters')}</td></tr>`; return; }
+  tbody.innerHTML = items.map(t=>{
+    const b=getBook(t.bookId), s=getStu(t.studentId), over=isOverdue(t);
+    return `<tr>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted)">${t.id}</span></td>
+      <td><strong style="color:var(--cream)">${b?b.title:'—'}</strong></td>
+      <td>${s?s.name:'—'}</td>
+      <td>${fmtDate(t.issuedDate)}</td>
+      <td style="color:${over?'var(--red)':'inherit'}">${fmtDate(t.dueDate)}</td>
+      <td style="color:var(--green)">${fmtDate(t.returnedDate)}</td>
+      <td>${t.returnedDate
+        ? `<span class="badge badge-green">Returned</span>`
+        : over
+          ? `<span class="badge badge-red">Overdue</span>`
+          : `<span class="badge badge-amber">Borrowed</span>`}</td>
+      <td>
+        ${STATE.role==='admin' && !t.returnedDate ? `<button class="btn btn-success btn-sm" onclick="returnBook('${t.id}')">↩ Return</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+  renderPagination('txnPagination', STATE.txnPage, pages, 'txnGotoPage');
+}
+
+/* ── Transaction Modal (Issue Book) ── */
+function openTxnModal() {
+  showModal(
+    '📤 Issue Book to Student',
+    `<div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Student *</label>
+        <select class="form-input" id="tm-student">
+          <option value="">Select student…</option>
+          ${STATE.students.map(s=>`<option value="${s.id}">${s.name} (${s.id})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Book *</label>
+        <select class="form-input" id="tm-book">
+          <option value="">Select book…</option>
+          ${STATE.books.filter(b=>b.available>0).map(b=>`<option value="${b.id}">${b.title} (${b.available} avail.)</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Issue Date</label>
+        <input class="form-input" id="tm-issued" type="date" value="${today()}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input class="form-input" id="tm-due" type="date" value="${dueDefault()}"/>
+      </div>
+    </div>`,
+    [
+      { label:'Cancel', cls:'btn-ghost', action:closeModal },
+      { label:'Issue Book', cls:'btn-primary', action:issueTxn }
+    ]
+  );
+}
+
+function dueDefault() {
+  const d = new Date(); d.setDate(d.getDate()+14);
+  return d.toISOString().split('T')[0];
+}
+
+async function issueTxn() {
+  const studentId = val('tm-student');
+  const bookId    = parseInt(val('tm-book'));
+  const issued    = val('tm-issued');
+  const due       = val('tm-due');
+  if (!studentId||!bookId) { toast('Select student and book','warning'); return; }
+  const already = STATE.transactions.find(t=>t.studentId===studentId&&t.bookId===bookId&&!t.returnedDate);
+  if (already) { toast('Student already has this book','warning'); return; }
+  try {
+    const res = await API.post('/transactions', { studentId, bookId, issuedDate:issued, dueDate:due });
+    if (res.success===false) { toast(res.message||'Failed to issue','error'); return; }
+    STATE.transactions.unshift(res.data);
+    const bk = getBook(bookId); if(bk) bk.available--;
+    closeModal(); renderTxnPage(); renderDashboard(); renderBooksPage();
+    toast(`Book issued successfully!`,'success');
+  } catch(e) { toast('Error issuing book','error'); }
+}
+
+async function returnBook(txnId) {
+  try {
+    const res = await API.put(`/transactions/${txnId}`, { action:'return' });
+    const idx = STATE.transactions.findIndex(t=>t.id===txnId);
+    if (idx>=0) STATE.transactions[idx] = { ...STATE.transactions[idx], ...res.data };
+    const t = STATE.transactions[idx];
+    const bk = getBook(t.bookId); if(bk) bk.available = Math.min(bk.available+1, bk.copies);
+    toast('Book returned successfully!','success');
+    renderTxnPage(); renderDashboard(); renderBooksPage();
+  } catch(e) { toast('Error returning book','error'); }
+}
+
+/* ── Quick Issue (Dashboard) ── */
+function populateQuickSelects() {
+  const qs = document.getElementById('qi-student');
+  const qb = document.getElementById('qi-book');
+  if (!qs||!qb) return;
+  qs.innerHTML = '<option value="">Select student…</option>' + STATE.students.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  qb.innerHTML = '<option value="">Select book…</option>' + STATE.books.map(b=>`<option value="${b.id}">${b.title} (${b.available}/${b.copies})</option>`).join('');
+}
+
+async function quickIssue() {
+  const action    = document.getElementById('qi-action').value;
+  const studentId = document.getElementById('qi-student').value;
+  const bookId    = parseInt(document.getElementById('qi-book').value);
+  if (!studentId||!bookId) { toast('Select student and book','warning'); return; }
+  if (action==='borrow') {
+    const res = await API.post('/transactions', { studentId, bookId, issuedDate:today(), dueDate:dueDefault() });
+    if (res.success===false) { toast(res.message,'error'); return; }
+    STATE.transactions.unshift(res.data);
+    const bk=getBook(bookId); if(bk) bk.available--;
+    toast('Book issued!','success');
+  } else {
+    const t = STATE.transactions.find(t=>t.studentId===studentId&&t.bookId===bookId&&!t.returnedDate);
+    if (!t) { toast('No active borrow found','warning'); return; }
+    await returnBook(t.id);
+    return;
+  }
+  renderDashboard(); renderTxnPage();
+}
+
+/* ══════════════════════════════════════════════
+   STUDENT PORTAL
+══════════════════════════════════════════════ */
+function renderCatalog() {
+  const q   = (document.getElementById('catSearch')?.value||'').toLowerCase();
+  const gen = document.getElementById('catGenreFilter')?.value||'';
+  const books = STATE.books.filter(b=>{
+    const mQ = !q || b.title.toLowerCase().includes(q)||b.author.toLowerCase().includes(q);
+    const mG = !gen || b.genre===gen;
+    return mQ&&mG;
+  });
+  const grid = document.getElementById('catalogGrid');
+  if (!books.length) { grid.innerHTML = emptyState('No books found','Try a different search'); return; }
+  const stuId = STATE.user?.studentId;
+  grid.innerHTML = books.map(b=>{
+    const borrowed = STATE.transactions.find(t=>t.studentId===stuId&&t.bookId===b.id&&!t.returnedDate);
+    return `<div class="info-card">
+      <div style="display:flex;gap:0.75rem;align-items:flex-start">
+        <div style="width:8px;height:60px;border-radius:3px;background:${BOOK_COLORS[b.id%BOOK_COLORS.length]};flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-weight:600;color:var(--cream)">${b.title}</div>
+          <div style="font-size:0.82rem;color:var(--muted);font-style:italic">${b.author}</div>
+          <div style="margin-top:0.4rem;display:flex;gap:0.4rem;flex-wrap:wrap">
+            <span class="badge badge-blue">${b.genre}</span>
+            ${b.available>0?`<span class="badge badge-green">${b.available} avail.</span>`:`<span class="badge badge-red">All Out</span>`}
+          </div>
+          ${b.shelf?`<div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;font-family:'JetBrains Mono',monospace">Shelf: ${b.shelf}</div>`:''}
+        </div>
+      </div>
+      <div class="ic-actions">
+        ${borrowed
+          ? `<span class="badge badge-amber" style="flex:1;justify-content:center">Already Borrowed</span>`
+          : b.available>0
+            ? `<button class="btn btn-primary btn-sm" onclick="studentBorrow(${b.id})" style="flex:1">📤 Borrow</button>`
+            : `<span class="badge badge-gray" style="flex:1;justify-content:center">Unavailable</span>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function studentBorrow(bookId) {
+  const stuId = STATE.user?.studentId;
+  if (!stuId) { toast('Student ID not found','error'); return; }
+  try {
+    const res = await API.post('/transactions', { studentId:stuId, bookId, issuedDate:today(), dueDate:dueDefault() });
+    if (res.success===false) { toast(res.message,'error'); return; }
+    STATE.transactions.unshift(res.data);
+    const bk=getBook(bookId); if(bk) bk.available--;
+    toast(`"${bk?.title}" borrowed! Due: ${fmtDate(dueDefault())}`,'success');
+    renderCatalog(); renderMyBooks();
+  } catch(e) { toast('Error borrowing book','error'); }
+}
+
+function renderMyBooks() {
+  const stuId = STATE.user?.studentId;
+  const active = STATE.transactions.filter(t=>t.studentId===stuId&&!t.returnedDate);
+  const grid = document.getElementById('myBooksGrid');
+  if (!active.length) { grid.innerHTML = emptyState('No active borrows','Browse the catalogue to borrow books'); return; }
+  grid.innerHTML = active.map(t=>{
+    const b=getBook(t.bookId), over=isOverdue(t);
+    return `<div class="info-card">
+      <div style="display:flex;gap:0.75rem;align-items:flex-start">
+        <div style="width:8px;height:60px;border-radius:3px;background:${BOOK_COLORS[(t.bookId||0)%BOOK_COLORS.length]};flex-shrink:0"></div>
+        <div>
+          <div style="font-weight:600;color:var(--cream)">${b?b.title:'Unknown Book'}</div>
+          <div style="font-size:0.82rem;color:var(--muted);font-style:italic">${b?b.author:'—'}</div>
+        </div>
+      </div>
+      <hr class="divider"/>
+      <div class="ic-row">📅 Borrowed: ${fmtDate(t.issuedDate)}</div>
+      <div class="ic-row" style="color:${over?'var(--red)':'var(--green)'}">
+        ⏰ Due: <strong>${fmtDate(t.dueDate)}</strong>
+        ${over?'&nbsp;<span class="badge badge-red">Overdue</span>':'&nbsp;<span class="badge badge-green">On Time</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMyHistory() {
+  const stuId = STATE.user?.studentId;
+  const hist = STATE.transactions.filter(t=>t.studentId===stuId);
+  const tbody = document.getElementById('myHistoryBody');
+  if (!hist.length) { tbody.innerHTML = `<tr><td colspan="5">${emptyState('No history yet','')}</td></tr>`; return; }
+  const over = t => !t.returnedDate && new Date(t.dueDate)<new Date(today());
+  tbody.innerHTML = hist.map(t=>{
+    const b=getBook(t.bookId), o=over(t);
+    return `<tr>
+      <td><strong style="color:var(--cream)">${b?b.title:'—'}</strong></td>
+      <td>${fmtDate(t.issuedDate)}</td>
+      <td>${fmtDate(t.dueDate)}</td>
+      <td style="color:var(--green)">${fmtDate(t.returnedDate)}</td>
+      <td>${t.returnedDate?`<span class="badge badge-green">Returned</span>`:o?`<span class="badge badge-red">Overdue</span>`:`<span class="badge badge-amber">Borrowed</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   GLOBAL SEARCH
+══════════════════════════════════════════════ */
+function globalSearchFn(q) {
+  if (!q) return;
+  // Just route to books with search pre-filled
+  const bookQ = document.getElementById('bookSearch');
+  if (bookQ) bookQ.value = q;
+  navTo(STATE.role==='admin'?'books':'catalog');
+}
+
+/* ══════════════════════════════════════════════
+   MODAL SYSTEM
+══════════════════════════════════════════════ */
+function showModal(title, body, actions=[]) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalFooter').innerHTML = actions.map((a,i)=>
+    `<button class="btn ${a.cls}" id="ma-${i}">${a.label}</button>`
+  ).join('');
+  actions.forEach((a,i) => document.getElementById('ma-'+i).onclick = a.action);
+  document.getElementById('modalOverlay').style.display = 'block';
+}
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+/* ══════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════ */
+const TOAST_ICONS = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
+function toast(msg, type='info') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${TOAST_ICONS[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => { t.style.transition='opacity 0.3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+const val = id => (document.getElementById(id)?.value||'').trim();
+
+function emptyState(title, sub) {
+  return `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">${title}</div>${sub?`<div class="empty-sub">${sub}</div>`:''}</div>`;
+}
+
+/* ── Mobile sidebar ── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+/* ── Session restore ── */
+window.addEventListener('load', () => {
+  const saved = sessionStorage.getItem('user');
+  if (saved) {
+    const u = JSON.parse(saved);
+    STATE.role = u.role; STATE.user = u;
+    document.getElementById('loginScreen').style.display = 'none';
+    initApp();
+  }
+});
+</script>
+</body>
+</html>
